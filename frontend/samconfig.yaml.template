@@ -1,0 +1,9 @@
+version: 0.1
+
+dev:
+  deploy:
+    parameters:
+      stack_name: ${STACK_NAME}
+      region: us-east-1
+      capabilities: CAPABILITY_IAM
+      confirm_changeset: false

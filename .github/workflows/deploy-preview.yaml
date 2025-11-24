@@ -1,0 +1,244 @@
+name: Deploy Preview
+run-name: Preview - ${{ github.actor }}
+
+on:
+  push:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: preview-${{ github.actor }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  prepare-deployment:
+    name: Prepare Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      env_descriptor: ${{ steps.prepare-parameters.outputs.env_descriptor }}
+      env_hash: ${{ steps.prepare-parameters.outputs.env_hash }}
+      env_name: ${{ steps.prepare-parameters.outputs.env_name }}
+      backend_stack_name: ${{ steps.prepare-parameters.outputs.backend_stack_name }}
+      frontend_stack_name: ${{ steps.prepare-parameters.outputs.frontend_stack_name }}
+    steps:
+      - name: Prepare parameters
+        id: prepare-parameters
+        run: |
+          ENV_DESCRIPTOR="env-${{ github.actor }}"
+          ENV_HASH=$(echo -n "$ENV_DESCRIPTOR" | sha1sum | cut -c1-6)
+          ENV_NAME="${{ github.actor }}"
+          BACKEND_STACK_NAME="-purple-team-backend-$ENV_DESCRIPTOR"
+          FRONTEND_STACK_NAME="purple-team-frontend-$ENV_DESCRIPTOR"
+
+          echo "env_descriptor=$ENV_DESCRIPTOR" >> $GITHUB_OUTPUT
+          echo "env_hash=$ENV_HASH" >> $GITHUB_OUTPUT
+          echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
+          echo "backend_stack_name=$BACKEND_STACK_NAME" >> $GITHUB_OUTPUT
+          echo "frontend_stack_name=$FRONTEND_STACK_NAME" >> $GITHUB_OUTPUT
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          # Preview Deployment
+          * Environment Descriptor: \`$ENV_DESCRIPTOR\`
+          * Environment Hash: \`$ENV_HASH\`
+          * Backend Stack: \`$BACKEND_STACK_NAME\`
+          * Frontend Stack: \`$FRONTEND_STACK_NAME\`
+          EOF
+
+  deploy-backend:
+    name: Deploy Backend
+    needs: [prepare-deployment]
+    runs-on: ubuntu-latest
+    outputs:
+      api_url: ${{ steps.backend-outputs.outputs.api_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.PIPELINE_EXECUTION_ROLE }}
+
+      - name: Replace Variables in samconfig
+        env:
+          STACK_NAME: ${{ needs.prepare-deployment.outputs.backend_stack_name }}
+          ENV_HASH: ${{ needs.prepare-deployment.outputs.env_hash }}
+          ENV_NAME: ${{ needs.prepare-deployment.outputs.env_name }}
+        run: |
+          envsubst < samconfig.yaml.template > samconfig.yaml
+          echo "Generated samconfig.yaml:"
+          cat samconfig.yaml
+
+      - name: Deploy backend stack
+        run: |
+          npm install -g esbuild
+          npm ci
+
+          sam build --template-file template.yaml
+
+          sam deploy \
+            --config-file samconfig.yaml \
+            --config-env dev \
+            --s3-bucket "${{ secrets.ARTIFACTS_BUCKET_NAME }}" \
+            --role-arn "${{ secrets.CLOUDFORMATION_EXECUTION_ROLE }}" \
+            --no-fail-on-empty-changeset
+
+      - name: Retrieve backend outputs
+        id: backend-outputs
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name ${{ needs.prepare-deployment.outputs.backend_stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
+            --output text)
+
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## Backend Deployed
+          * API URL: \`$API_URL\`
+          * User Pool ID: \`$USER_POOL_ID\`
+          EOF
+
+  deploy-frontend-infrastructure:
+    name: Deploy Frontend Infrastructure
+    needs: [prepare-deployment, deploy-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.PIPELINE_EXECUTION_ROLE }}
+
+      - name: Generate samconfig
+        working-directory: frontend
+        env:
+          STACK_NAME: ${{ needs.prepare-deployment.outputs.frontend_stack_name }}
+        run: |
+          envsubst < samconfig.yaml.template > samconfig.yaml
+          echo "Generated samconfig.yaml:"
+          cat samconfig.yaml
+
+      - name: Deploy frontend stack
+        working-directory: frontend
+        run: |
+          sam build --template-file template.yaml
+
+          sam deploy \
+            --config-file samconfig.yaml \
+            --config-env dev \
+            --s3-bucket "${{ secrets.ARTIFACTS_BUCKET_NAME }}" \
+            --role-arn "${{ secrets.CLOUDFORMATION_EXECUTION_ROLE }}" \
+            --no-fail-on-empty-changeset
+
+  build-and-deploy-frontend:
+    name: Build and Deploy Frontend
+    needs: [prepare-deployment, deploy-backend, deploy-frontend-infrastructure]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.PIPELINE_EXECUTION_ROLE }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build React application
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: ${{ needs.deploy-backend.outputs.api_url }}
+        run: |
+          npm run build
+
+          if [ ! -d "dist" ]; then
+            echo "Error: dist directory not found after build"
+            exit 1
+          fi
+
+      - name: Upload to S3
+        run: |
+          BUCKET_NAME=$(aws cloudformation describe-stacks \
+            --stack-name ${{ needs.prepare-deployment.outputs.frontend_stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`BucketName`].OutputValue' \
+            --output text)
+
+          aws s3 sync frontend/dist s3://$BUCKET_NAME \
+            --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "index.html" \
+            --exclude "*.txt"
+
+          aws s3 cp frontend/dist/index.html s3://$BUCKET_NAME/index.html \
+            --cache-control "public,max-age=0,must-revalidate"
+
+      - name: Invalidate CloudFront cache
+        run: |
+          DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
+            --stack-name ${{ needs.prepare-deployment.outputs.frontend_stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`DistributionId`].OutputValue' \
+            --output text)
+
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id $DISTRIBUTION_ID \
+            --paths "/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+
+          echo "Waiting for invalidation $INVALIDATION_ID to complete..."
+          aws cloudfront wait invalidation-completed \
+            --distribution-id $DISTRIBUTION_ID \
+            --id $INVALIDATION_ID
+
+      - name: Get preview URL
+        id: preview-url
+        run: |
+          CLOUDFRONT_URL=$(aws cloudformation describe-stacks \
+            --stack-name ${{ needs.prepare-deployment.outputs.frontend_stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontUrl`].OutputValue' \
+            --output text)
+
+          echo "cloudfront_url=$CLOUDFRONT_URL" >> $GITHUB_OUTPUT
+
+      - name: Add deployment summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🚀 Preview Environment Deployed
+
+          Your complete preview environment is ready!
+
+          **Preview URL:** ${{ steps.preview-url.outputs.cloudfront_url }}
+
+          **Backend Stack:** \`${{ needs.prepare-deployment.outputs.backend_stack_name }}\`
+          **Frontend Stack:** \`${{ needs.prepare-deployment.outputs.frontend_stack_name }}\`
+
+          **API URL:** \`${{ needs.deploy-backend.outputs.api_url }}\`
+
+          ### 📝 Notes
+          - This preview includes both backend and frontend
+          - Each GitHub user gets one preview environment (shared across all their PRs)
+          - Changes to this PR will automatically update the preview
+          EOF

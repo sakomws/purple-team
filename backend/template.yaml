@@ -51,6 +51,8 @@ Resources:
 
   DataTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
