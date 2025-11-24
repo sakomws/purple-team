@@ -66,55 +66,6 @@ Resources:
         - AttributeName: sk
           KeyType: RANGE
 
-  # Add your Lambda functions here
-  # Node.js example:
-  # MyFunction:
-  #   Type: AWS::Serverless::Function
-  #   Metadata:
-  #     BuildMethod: esbuild
-  #     BuildProperties:
-  #       <<: *esbuild-properties
-  #       EntryPoints:
-  #         - index.mjs
-  #   Properties:
-  #     Runtime: nodejs22.x
-  #     Handler: index.handler
-  #     CodeUri: my-function/
-  #     Policies:
-  #       - Statement:
-  #           - Effect: Allow
-  #             Action:
-  #               - dynamodb:Query
-  #             Resource: !GetAtt DataTable.Arn
-  #     Events:
-  #       Api:
-  #         Type: HttpApi
-  #         Properties:
-  #           ApiId: !Ref HttpApi
-  #           Path: /my-path
-  #           Method: get
-
-  # Python example:
-  # MyPythonFunction:
-  #   Type: AWS::Serverless::Function
-  #   Properties:
-  #     Runtime: python3.13
-  #     Handler: app.lambda_handler
-  #     CodeUri: my-python-function/
-  #     Policies:
-  #       - Statement:
-  #           - Effect: Allow
-  #             Action:
-  #               - dynamodb:PutItem
-  #             Resource: !GetAtt DataTable.Arn
-  #     Events:
-  #       Api:
-  #         Type: HttpApi
-  #         Properties:
-  #           ApiId: !Ref HttpApi
-  #           Path: /my-path
-  #           Method: post
-
 Outputs:
   ApiUrl:
     Description: HTTP API endpoint URL

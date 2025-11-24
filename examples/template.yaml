@@ -20,7 +20,6 @@ Metadata:
 
 Globals:
   Function:
-    CodeUri: functions
     Architectures:
       - arm64
     Tracing: Active
@@ -63,7 +62,7 @@ Resources:
         - AttributeName: sk
           KeyType: RANGE
 
-  GetItemsFunction:
+  GetResourceBFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: esbuild
@@ -74,7 +73,7 @@ Resources:
     Properties:
       Runtime: nodejs22.x
       Handler: get.handler
-      CodeUri: items/
+      CodeUri: functions/resourceTypeB/
       Policies:
         - Statement:
             - Effect: Allow
@@ -86,10 +85,10 @@ Resources:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
-            Path: /items
+            Path: /resourceB
             Method: get
 
-  CreateItemFunction:
+  CreateResourceBFunction:
     Type: AWS::Serverless::Function
     Metadata:
       BuildMethod: esbuild
@@ -100,7 +99,7 @@ Resources:
     Properties:
       Runtime: nodejs22.x
       Handler: create.handler
-      CodeUri: items/
+      CodeUri: functions/resourceTypeB/
       Policies:
         - Statement:
             - Effect: Allow
@@ -112,15 +111,15 @@ Resources:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
-            Path: /items
+            Path: /resourceB
             Method: post
 
-  GetDataFunction:
+  GetResourceAFunction:
     Type: AWS::Serverless::Function
     Properties:
       Runtime: python3.13
       Handler: get.lambda_handler
-      CodeUri: data/
+      CodeUri: functions/resourceTypeA/
       Policies:
         - Statement:
             - Effect: Allow
@@ -132,15 +131,15 @@ Resources:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
-            Path: /data
+            Path: /resourceA
             Method: get
 
-  CreateDataFunction:
+  CreateResourceAFunction:
     Type: AWS::Serverless::Function
     Properties:
       Runtime: python3.13
       Handler: create.lambda_handler
-      CodeUri: data/
+      CodeUri: functions/resourceTypeA/
       Policies:
         - Statement:
             - Effect: Allow
@@ -152,7 +151,7 @@ Resources:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
-            Path: /data
+            Path: /resourceA
             Method: post
 
 Outputs:
