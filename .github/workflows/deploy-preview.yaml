@@ -34,7 +34,7 @@ jobs:
           ENV_DESCRIPTOR="env-${{ github.actor }}"
           ENV_HASH=$(echo -n "$ENV_DESCRIPTOR" | sha1sum | cut -c1-6)
           ENV_NAME="${{ github.actor }}"
-          BACKEND_STACK_NAME="-purple-team-backend-$ENV_DESCRIPTOR"
+          BACKEND_STACK_NAME="purple-team-backend-$ENV_DESCRIPTOR"
           FRONTEND_STACK_NAME="purple-team-frontend-$ENV_DESCRIPTOR"
 
           echo "env_descriptor=$ENV_DESCRIPTOR" >> $GITHUB_OUTPUT
@@ -68,6 +68,7 @@ jobs:
           role-to-assume: ${{ secrets.PIPELINE_EXECUTION_ROLE }}
 
       - name: Replace Variables in samconfig
+        working-directory: backend
         env:
           STACK_NAME: ${{ needs.prepare-deployment.outputs.backend_stack_name }}
           ENV_HASH: ${{ needs.prepare-deployment.outputs.env_hash }}
@@ -78,6 +79,7 @@ jobs:
           cat samconfig.yaml
 
       - name: Deploy backend stack
+        working-directory: backend
         run: |
           npm install -g esbuild
           npm ci
