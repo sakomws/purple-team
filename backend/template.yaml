@@ -420,10 +420,159 @@ Resources:
       QueueName: !Sub '${AWS::StackName}-egg-data-queue'
       VisibilityTimeout: 120
 
+  EggStreamForwarder:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        <<: *esbuild-properties
+        EntryPoints:
+          - index.mjs
+    Properties:
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: functions/egg-stream-forwarder/
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref EggDataQueue
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt EggDataQueue.Arn
+      Events:
+        DynamoDBStream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt DataTable.StreamArn
+            StartingPosition: LATEST
+            BatchSize: 1
+            FilterCriteria:
+              Filters:
+                - Pattern: '{"eventName": ["INSERT"], "dynamodb": {"NewImage": {"sk": {"S": [{"prefix": "EGG#"}]}}}}'
 
+  EggAnalysisAgent:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        <<: *esbuild-properties
+        EntryPoints:
+          - index.mjs
+    Properties:
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: functions/egg-analysis-agent/
+      Timeout: 60
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt DataTable.Arn
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt EggDataQueue.Arn
+            BatchSize: 1
 
+  # Queue for analyzed eggs (for future chicken generation feature)
+  AnalyzedEggQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${AWS::StackName}-analyzed-egg-queue'
+      VisibilityTimeout: 120
 
+  AnalysisResultForwarder:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        <<: *esbuild-properties
+        EntryPoints:
+          - index.mjs
+    Properties:
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: functions/analysis-result-forwarder/
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref AnalyzedEggQueue
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt AnalyzedEggQueue.Arn
+      Events:
+        DynamoDBStream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt DataTable.StreamArn
+            StartingPosition: LATEST
+            BatchSize: 1
+            FilterCriteria:
+              Filters:
+                - Pattern: '{"eventName": ["MODIFY"], "dynamodb": {"NewImage": {"sk": {"S": [{"prefix": "EGG#"}]}, "hatchLikelihood": {"N": [{"exists": true}]}}}}'
 
+  ImageUploadBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-image-uploads-${AWS::AccountId}'
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: ['*']
+            AllowedMethods: [PUT, POST]
+            AllowedHeaders: ['*']
+            MaxAge: 3000
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  GeneratePresignedUrlFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        <<: *esbuild-properties
+        EntryPoints:
+          - generate-presigned-url.mjs
+    Properties:
+      Runtime: nodejs22.x
+      Handler: generate-presigned-url.handler
+      CodeUri: functions/image-upload/
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref ImageUploadBucket
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:PutObjectAcl
+              Resource: !Sub '${ImageUploadBucket.Arn}/*'
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /upload/presigned-url
+            Method: post
 
 Outputs:
   ApiUrl:
