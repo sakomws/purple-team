@@ -1,16 +1,26 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Chicken Hatching Management System - Enterprise-grade AI-powered blockchain-ready solution
+Description: Hackathon backend infrastructure
 
-Parameters:
-  AMBAccessToken:
-    Type: String
-    Default: demo-token-replace-with-real-amb-access-token
-    Description: Amazon Managed Blockchain Access Token for Ethereum
-    NoEcho: true
+Metadata:
+  esbuild-properties: &esbuild-properties
+    Format: esm
+    Minify: false
+    OutExtension:
+      - .js=.mjs
+    Target: es2020
+    Sourcemap: false
+    EntryPoints:
+      - index.mjs
+    Banner:
+      - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+    External:
+      - "@aws-sdk/*"
+    Loader: []
 
 Globals:
   Function:
+    CodeUri: functions
     Architectures:
       - arm64
     Tracing: Active
@@ -18,6 +28,7 @@ Globals:
     MemorySize: 512
     Environment:
       Variables:
+        AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
         TABLE_NAME: !Ref DataTable
 
 Resources:
