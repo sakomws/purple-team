@@ -64,6 +64,116 @@ Resources:
           KeyType: HASH
         - AttributeName: sk
           KeyType: RANGE
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  # Egg Analysis Agent Resources
+  EggDataQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${AWS::StackName}-egg-data-queue'
+      VisibilityTimeout: 120
+
+  EggStreamForwarder:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        <<: *esbuild-properties
+        EntryPoints:
+          - index.mjs
+    Properties:
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: functions/egg-stream-forwarder/
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref EggDataQueue
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt EggDataQueue.Arn
+      Events:
+        DynamoDBStream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt DataTable.StreamArn
+            StartingPosition: LATEST
+            BatchSize: 1
+            FilterCriteria:
+              Filters:
+                - Pattern: '{"eventName": ["INSERT"], "dynamodb": {"NewImage": {"sk": {"S": [{"prefix": "EGG#"}]}}}}'
+
+  EggAnalysisAgent:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        <<: *esbuild-properties
+        EntryPoints:
+          - index.mjs
+    Properties:
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: functions/egg-analysis-agent/
+      Timeout: 60
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt DataTable.Arn
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt EggDataQueue.Arn
+            BatchSize: 1
+
+  # Queue for analyzed eggs (for future chicken generation feature)
+  AnalyzedEggQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub '${AWS::StackName}-analyzed-egg-queue'
+      VisibilityTimeout: 120
+
+  AnalysisResultForwarder:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        <<: *esbuild-properties
+        EntryPoints:
+          - index.mjs
+    Properties:
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: functions/analysis-result-forwarder/
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref AnalyzedEggQueue
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt AnalyzedEggQueue.Arn
+      Events:
+        DynamoDBStream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt DataTable.StreamArn
+            StartingPosition: LATEST
+            BatchSize: 1
+            FilterCriteria:
+              Filters:
+                - Pattern: '{"eventName": ["MODIFY"], "dynamodb": {"NewImage": {"sk": {"S": [{"prefix": "EGG#"}]}, "hatchLikelihood": {"N": [{"exists": true}]}}}}'
 
   ImageUploadBucket:
     Type: AWS::S3::Bucket
