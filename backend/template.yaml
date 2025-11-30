@@ -2,16 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: Hackathon backend infrastructure
 
-Metadata:
-  esbuild-properties: &esbuild-properties
-    Format: esm
-    Minify: false
-    Target: es2022
-    Sourcemap: false
-    EntryNames: '[dir]/[name]'
-    Banner:
-      - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
-
 Parameters:
   AMBAccessToken:
     Type: String
