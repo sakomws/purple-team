@@ -511,7 +511,7 @@ function EggRegistryTab({ eggs, onRegisterEgg, onRefresh }: { eggs: Egg[], onReg
           </Button>
           <Button 
             onClick={() => setShowRegistrationForm(true)}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-purple-600 hover:bg-purple-700"
           >
             Register New Egg
           </Button>
@@ -864,7 +864,7 @@ function PredictionsTab({ eggs }: { eggs: Egg[] }) {
               <div className="mt-4">
                 <p className="text-sm text-gray-600 mb-2">Development Progress</p>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{width: '65%'}}></div>
+                  <div className="bg-purple-600 h-2 rounded-full" style={{width: '65%'}}></div>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">Day 14 of 21 - Feather follicle formation</p>
               </div>
