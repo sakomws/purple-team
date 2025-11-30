@@ -615,15 +615,20 @@ Resources:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
-              Resource: '*'
+              Resource: !Sub 'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*'
             - Effect: Allow
               Action:
                 - s3:PutObject
+                - s3:PutObjectAcl
               Resource: !Sub '${ImageUploadBucket.Arn}/*'
             - Effect: Allow
               Action:
                 - dynamodb:UpdateItem
               Resource: !GetAtt DataTable.Arn
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: '*'
       Events:
         SQSEvent:
           Type: SQS
