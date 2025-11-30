@@ -16,11 +16,11 @@ An unnecessarily complex, event-driven choreography system that analyzes egg ima
 
 ### 1. Image Upload & Analysis
 - User uploads image containing chicken eggs
-- System extracts eggs from image using computer vision
+- System extracts eggs from image using Amazon Nova multimodal AI
 - Each egg gets assigned a unique identifier and tracking number
 
 ### 2. Viability Assessment Pipeline
-- AI agent analyzes each egg for:
+- Amazon Nova AI agent analyzes each egg for:
   - Shell integrity
   - Size and shape consistency
   - Color patterns indicating health
@@ -102,8 +102,7 @@ Because we can. Also:
 ## AWS Services Showcase
 
 ### Core Services
-- **Amazon Bedrock**: AI agent for viability analysis, chicken generation, song lyrics
-- **Amazon Rekognition**: Egg detection and extraction from images
+- **Amazon Bedrock (Nova Models)**: Multimodal AI for egg detection, viability analysis, chicken generation, song lyrics
 - **EventBridge**: Event routing and choreography
 - **Step Functions**: Orchestrate complex multi-step workflows (for song generation)
 - **Lambda**: All the microservices
@@ -181,24 +180,24 @@ Because we can. Also:
 ## Technical Implementation Notes
 
 ### Image Processing Pipeline
-- Use Rekognition Custom Labels to detect eggs
-- Extract each egg as separate image
+- Use Amazon Nova multimodal model to detect and analyze eggs
+- Extract each egg as separate image using Nova's vision capabilities
 - Store in S3 with metadata
 
 ### Viability Analysis
-- Bedrock agent with custom prompt:
-  - Analyze shell texture and color
+- Amazon Nova agent with custom prompt:
+  - Analyze shell texture and color using vision capabilities
   - Estimate age based on appearance
   - Simulate candling analysis
   - Output structured viability assessment
 
 ### Chicken Generation
-- Bedrock agent generates breed prediction
-- Use Stable Diffusion (via Bedrock) to generate chicken image
+- Amazon Nova agent generates breed prediction
+- Use Amazon Nova Canvas (via Bedrock) to generate chicken image
 - Store in S3, return URL
 
 ### Affirmation Song Generation
-- Bedrock generates personalized lyrics
+- Amazon Nova generates personalized lyrics
 - Polly converts to speech with SSML for musical quality
 - Store audio in S3
 
@@ -245,17 +244,17 @@ Because we can. Also:
 
 1. **Absurdly Complex**: Event-driven choreography for egg analysis
 2. **Visually Impressive**: Real-time event flow, chicken renders, dashboard
-3. **AI Showcase**: Bedrock for multiple use cases
+3. **AI Showcase**: Amazon Nova multimodal AI for vision and generation
 4. **Serverless**: Pure Lambda + EventBridge architecture
 5. **Hilarious**: Affirmation songs for sad eggs
 6. **Complete**: End-to-end working demo
-7. **Buzzword Complnt-driven, serverless, AI-powered, microservices
+7. **Buzzword Compliant**: Event-driven, serverless, AI-powered, microservices
 
 ## Kiro Integration Story
 
 - "Kiro generated all Lambda functions from event schemas"
 - "Kiro helped design the event choreography architecture"
-- "Kiro created the Bedrock agent prompts"
+- "Kiro created the Amazon Nova agent prompts"
 - "Built in 5 hours with Kiro assistance"
 
 ## Stretch Goals (If Ahead of Schedule)
