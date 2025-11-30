@@ -67,6 +67,8 @@ jobs:
           aws-region: us-east-1
           role-to-assume: ${{ secrets.PIPELINE_EXECUTION_ROLE }}
 
+      - uses: actions/setup-python@v6
+
       - name: Replace Variables in samconfig
         working-directory: backend
         env:
