@@ -1,0 +1,53 @@
+# Implementation Plan
+
+- [x] 1. Set up infrastructure resources in SAM template
+  - [x] 1.1 Enable DynamoDB Streams on DataTable
+    - Add StreamSpecification with StreamViewType: NEW_AND_OLD_IMAGES to existing DataTable
+    - _Requirements: 5.3_
+  - [x] 1.2 Create SQS queue for egg data
+    - Create EggDataQueue SQS standard queue
+    - Configure visibility timeout to 60 seconds
+    - _Requirements: 1.1_
+  - [x] 1.3 Create DynamoDB Stream to SQS forwarder Lambda
+    - Create EggStreamForwarder Lambda function
+    - Configure DynamoDB event source with FilterCriteria for sk prefix "EGG#"
+    - Grant permissions to send messages to EggDataQueue
+    - _Requirements: 1.1, 5.1_
+  - [x] 1.4 Create Egg Analysis Agent Lambda function scaffold
+    - Create EggAnalysisAgent Lambda function
+    - Configure SQS event source from EggDataQueue
+    - Grant Bedrock InvokeModel permissions
+    - Grant DynamoDB PutItem permissions
+    - _Requirements: 1.2, 5.2_
+  - [x] 1.5 Create downstream handler Lambda scaffold
+    - Create AnalysisResultHandler Lambda function
+    - Configure DynamoDB event source with FilterCriteria for sk prefix "ANALYSIS#"
+    - _Requirements: 4.2, 5.1_
+
+- [x] 2. Implement DynamoDB Stream to SQS forwarder
+  - [x] 2.1 Implement stream forwarder handler
+    - Extract NewImage from DynamoDB stream record
+    - Send message to EggDataQueue with egg record data
+    - _Requirements: 1.1_
+
+- [x] 3. Implement Egg Analysis Agent core logic
+  - [x] 3.1 Implement SQS message extraction
+    - Parse SQS event to extract egg record
+    - Extract all egg characteristics (color, shape, size, shellTexture, shellIntegrity, hardness, spotsMarkings, bloomCondition, cleanliness, visibleDefects, overallGrade)
+    - _Requirements: 1.2_
+  - [x] 3.2 Implement Bedrock prompt construction and invocation
+    - Build prompt with all egg characteristics
+    - Call Bedrock InvokeModel API with Claude model
+    - Parse JSON response for possibleBreeds, breedConfidence, hatchLikelihood, chickenAppearance, notes
+    - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 3.3_
+  - [x] 3.3 Implement analysis result construction and DynamoDB write
+    - Build AnalysisResult with sk "ANALYSIS#{eggId}"
+    - Include all original egg data plus analysis results
+    - Write to DataTable
+    - _Requirements: 4.1_
+
+- [x] 4. Implement downstream handler
+  - [x] 4.1 Implement analysis result handler
+    - Process DynamoDB stream events for ANALYSIS# records
+    - Log analysis results for downstream processing
+    - _Requirements: 4.2, 4.3_
