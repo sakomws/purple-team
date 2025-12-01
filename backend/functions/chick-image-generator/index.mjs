@@ -2,10 +2,12 @@ import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedroc
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { EventBridgeClient, PutEventsCommand } from '@aws-sdk/client-eventbridge';
 
 const bedrock = new BedrockRuntimeClient({});
 const s3 = new S3Client({});
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const eventBridge = new EventBridgeClient({});
 
 const TABLE_NAME = process.env.TABLE_NAME;
 const BUCKET_NAME = process.env.BUCKET_NAME;
@@ -49,6 +51,11 @@ export const handler = async (event) => {
       await updateRecord(pk, sk, s3Uri);
       console.log(`Updated egg record ${eggId} with chickImageUrl`);
 
+      // Fire Egg Processing Completed event
+      const clutchId = pk.replace('CLUTCH#', '');
+      await publishEggProcessingCompleted(clutchId, eggId);
+      console.log(`Published Egg Processing Completed event for clutch ${clutchId}`);
+
     } catch (err) {
       console.error(`Error generating chick image for ${eggId}:`, err);
       throw err; // Let SQS retry
@@ -57,6 +64,16 @@ export const handler = async (event) => {
 
   return { statusCode: 200 };
 };
+
+async function publishEggProcessingCompleted(clutchId, eggId) {
+  await eventBridge.send(new PutEventsCommand({
+    Entries: [{
+      Source: 'chicken-counter',
+      DetailType: 'Egg Processing Completed',
+      Detail: JSON.stringify({ clutchId, eggId })
+    }]
+  }));
+}
 
 
 function buildPrompt(breed, appearance) {
@@ -103,7 +120,8 @@ async function uploadToS3(key, base64Image) {
     Bucket: BUCKET_NAME,
     Key: key,
     Body: buffer,
-    ContentType: 'image/png'
+    ContentType: 'image/png',
+    ACL: 'public-read'
   }));
 }
 
