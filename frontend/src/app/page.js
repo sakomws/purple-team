@@ -251,6 +251,9 @@ function MusicGenerator() {
 
     try {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> cfec27d (cont)
       // Call the local music generation server
       const response = await fetch('http://localhost:8000/api/music/generate', {
         method: 'POST',
@@ -259,6 +262,7 @@ function MusicGenerator() {
         },
         body: JSON.stringify(formData)
       });
+<<<<<<< HEAD
 
       const data = await response.json();
 
@@ -291,12 +295,27 @@ function MusicGenerator() {
         generated_at: new Date().toISOString(),
         demo_mode: true
       };
+=======
+>>>>>>> cfec27d (cont)
 
-      setMusicUrl(simulatedResponse.music_url);
-      
+      const data = await response.json();
+
+      if (response.ok) {
+        // Convert relative URL to absolute URL for the local server
+        const musicUrl = data.music_url.startsWith('/') 
+          ? `http://localhost:8000${data.music_url}` 
+          : data.music_url;
+        setMusicUrl(musicUrl);
+      } else {
+        setError(data.error || 'Failed to generate music');
+      }
     } catch (err) {
+<<<<<<< HEAD
       setError('Demo error: ' + err.message);
 >>>>>>> 3392aa2 (update)
+=======
+      setError('Network error: ' + err.message);
+>>>>>>> cfec27d (cont)
     } finally {
       setGenerating(false);
     }
@@ -433,9 +452,13 @@ function MusicGenerator() {
                 <p><strong>Style:</strong> {formData.style.split(',')[0]}</p>
                 <p><strong>Egg ID:</strong> {formData.eggId}</p>
 <<<<<<< HEAD
+<<<<<<< HEAD
                 <p><strong>Requested Duration:</strong> {formData.duration} seconds</p>
 =======
 >>>>>>> 3392aa2 (update)
+=======
+                <p><strong>Requested Duration:</strong> {formData.duration} seconds</p>
+>>>>>>> cfec27d (cont)
               </div>
               
               <a
@@ -455,12 +478,17 @@ function MusicGenerator() {
           Powered by ElevenLabs AI • Music stored securely in AWS S3
         </p>
 <<<<<<< HEAD
+<<<<<<< HEAD
         <p className="text-xs text-green-600 mt-1">
           ✅ Live Mode: Real ElevenLabs AI music generation active
 =======
         <p className="text-xs text-blue-600 mt-1">
           🚧 Demo Mode: Using sample audio while backend deploys
 >>>>>>> 3392aa2 (update)
+=======
+        <p className="text-xs text-green-600 mt-1">
+          ✅ Live Mode: Real ElevenLabs AI music generation active
+>>>>>>> cfec27d (cont)
         </p>
       </div>
     </div>
@@ -564,12 +592,17 @@ export default function Home() {
                   Generate custom music for your eggs using ElevenLabs AI
                 </p>
 <<<<<<< HEAD
+<<<<<<< HEAD
                 <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                   ✅ Live Mode - ElevenLabs API Active
 =======
                 <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   🚧 Demo Mode - Backend deployment in progress
 >>>>>>> 3392aa2 (update)
+=======
+                <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  ✅ Live Mode - ElevenLabs API Active
+>>>>>>> cfec27d (cont)
                 </div>
               </div>
               <MusicGenerator />
