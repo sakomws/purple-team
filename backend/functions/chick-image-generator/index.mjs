@@ -83,11 +83,62 @@ function buildPrompt(breed, appearance) {
   const pattern = appearance.featherPattern || 'solid';
   const legs = appearance.legColor || 'yellow';
 
-  return `A photorealistic image of a cute baby chick, ${breed || 'mixed breed'} breed. ` +
-    `The chick has ${plumage} downy feathers, a small ${comb} comb beginning to form, ` +
-    `${body} body proportions, ${pattern} feather pattern emerging, and ${legs} legs. ` +
-    `The chick is standing on clean straw in a warm brooder with soft lighting. ` +
-    `Professional poultry photography style, high detail, adorable expression.`;
+  // Random poses for variety
+  const poses = [
+    'standing alert with head tilted curiously',
+    'pecking at the ground',
+    'stretching one tiny wing',
+    'looking directly at the camera with bright eyes',
+    'mid-step walking forward',
+    'fluffed up and cozy',
+    'chirping with beak open',
+    'preening its downy feathers',
+    'scratching the ground with one foot',
+    'nestled down resting'
+  ];
+
+  // Random backgrounds
+  const backgrounds = [
+    'clean golden straw in a warm wooden brooder',
+    'soft green grass in a sunny farmyard',
+    'a rustic barn floor with scattered grain',
+    'a cozy nest of hay with warm lighting',
+    'a white studio backdrop with professional lighting',
+    'a garden path with spring flowers blurred in background',
+    'fresh wood shavings in a modern incubator',
+    'a weathered wooden fence post in morning light'
+  ];
+
+  // Random lighting styles
+  const lighting = [
+    'soft golden hour sunlight',
+    'warm brooder lamp glow',
+    'bright natural daylight',
+    'gentle morning light through a barn window',
+    'soft diffused studio lighting',
+    'dappled sunlight through leaves'
+  ];
+
+  // Random expressions/moods
+  const expressions = [
+    'adorable and curious',
+    'fluffy and content',
+    'alert and energetic',
+    'sleepy and peaceful',
+    'playful and mischievous',
+    'proud and confident'
+  ];
+
+  const pose = poses[Math.floor(Math.random() * poses.length)];
+  const background = backgrounds[Math.floor(Math.random() * backgrounds.length)];
+  const light = lighting[Math.floor(Math.random() * lighting.length)];
+  const expression = expressions[Math.floor(Math.random() * expressions.length)];
+
+  return `A photorealistic image of a ${expression} baby chick, ${breed || 'mixed breed'} breed. ` +
+    `The chick has ${plumage} downy feathers with ${pattern} pattern emerging, a tiny ${comb} comb forming, ` +
+    `${body} body build, and ${legs} colored legs. ` +
+    `The chick is ${pose} on ${background}. ` +
+    `${light}, professional poultry photography, ultra high detail, 8K quality, shallow depth of field.`;
 }
 
 async function generateImage(prompt) {
