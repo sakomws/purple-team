@@ -702,27 +702,29 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
-                - dynamodb:PutItem
-                - dynamodb:Query
-              Resource: !GetAtt DataTable.Arn
-            - Effect: Allow
-              Action:
-                - s3:PutObject
                 - s3:GetObject
               Resource: !Sub '${ImageUploadBucket.Arn}/*'
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt DataTable.Arn
       Events:
-        GenerateMusic:
-          Type: HttpApi
+        S3Upload:
+          Type: EventBridgeRule
           Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/music/generate
-            Method: post
-        GetMusicForEgg:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/music/egg/{eggId}
-            Method: get
+            Pattern:
+              source:
+                - aws.s3
+              detail-type:
+                - Object Created
+              detail:
+                bucket:
+                  name:
+                    - !Ref ImageUploadBucket
 
 Outputs:
   ApiUrl:

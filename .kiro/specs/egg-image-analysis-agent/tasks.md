@@ -1,0 +1,44 @@
+# Implementation Plan
+
+- [x] 1. Set up infrastructure resources in SAM template
+  - [x] 1.1 Create EventBridge rule for S3 uploads
+    - Add EventBridge rule to trigger on s3:ObjectCreated events from ImageUploadBucket
+    - Configure rule to invoke EggImageAnalysisAgent Lambda
+    - _Requirements: 5.1_
+  - [x] 1.2 Create Egg Image Analysis Agent Lambda function scaffold
+    - Create EggImageAnalysisAgent Lambda function with nodejs22.x runtime
+    - Configure 60 second timeout and 512MB memory
+    - Grant S3 GetObject permissions on ImageUploadBucket
+    - Grant Bedrock InvokeModel permissions
+    - Grant DynamoDB PutItem permissions on DataTable
+    - _Requirements: 5.2, 5.3, 5.4_
+
+- [x] 2. Implement Egg Image Analysis Agent core logic
+  - [x] 2.1 Implement S3 event parsing and image retrieval
+    - Parse EventBridge event to extract bucket name and object key
+    - Retrieve image from S3 using GetObject
+    - Convert image to base64 for Bedrock
+    - _Requirements: 1.2, 1.3_
+  - [x] 2.2 Implement Bedrock tool definition and invocation
+    - Define store_egg_data tool with egg characteristics schema
+    - Build system prompt for egg image analysis
+    - Invoke Bedrock Converse API with Nova Pro model and image
+    - _Requirements: 2.1, 2.2, 3.1_
+  - [x] 2.3 Implement agent loop for tool execution
+    - Implement loop to handle multiple tool_use responses
+    - Execute store_egg_data tool for each egg detected
+    - Send tool results back to Bedrock and continue until end_turn
+    - _Requirements: 2.3, 3.2, 3.3, 3.4_
+  - [x] 2.4 Implement DynamoDB record creation
+    - Create Clutch metadata record with correct key structure (pk: CLUTCH#{id}, sk: METADATA)
+    - Create Egg records with correct key structure (pk: CLUTCH#{clutchId}, sk: EGG#{eggId})
+    - Include GSI1PK and GSI1SK on Clutch for listing queries
+    - _Requirements: 4.1, 4.2, 4.3, 4.4_
+
+- [ ]* 2.5 Write property tests for core functions
+  - **Property 1: S3 Key Extraction**
+  - **Property 3: Tool Execution Creates Valid Egg Records**
+  - **Property 4: Clutch Key Structure**
+  - **Property 5: Egg Key Structure**
+  - **Property 6: Clutch GSI Keys**
+  - **Validates: Requirements 1.2, 3.3, 4.1, 4.2, 4.3, 4.4**
