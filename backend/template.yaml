@@ -184,7 +184,7 @@ Resources:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
-              Resource: !Sub 'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*'
+              Resource: '*'
       Events:
         PredictHatch:
           Type: HttpApi
@@ -487,7 +487,7 @@ Resources:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
-              Resource: !Sub 'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*'
+              Resource: '*'
             - Effect: Allow
               Action:
                 - dynamodb:PutItem
@@ -620,7 +620,7 @@ Resources:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
-              Resource: !Sub 'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*'
+              Resource: '*'
             - Effect: Allow
               Action:
                 - s3:PutObject
@@ -733,6 +733,81 @@ Resources:
                 bucket:
                   name:
                     - !Ref ImageUploadBucket
+
+  EggProcessingTrackerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        <<: *esbuild-properties
+        EntryPoints:
+          - index.mjs
+    Properties:
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: functions/egg-processing-tracker/
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+                - dynamodb:GetItem
+              Resource: !GetAtt DataTable.Arn
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: '*'
+      Events:
+        EggProcessingCompletedEvent:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              detail-type:
+                - "Egg Processing Completed"
+              source:
+                - "chicken-counter"
+
+  ConsolidateFindingsFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        <<: *esbuild-properties
+        EntryPoints:
+          - index.mjs
+    Properties:
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: functions/consolidate-findings/
+      Timeout: 60
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref ImageUploadBucket
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:UpdateItem
+              Resource: !GetAtt DataTable.Arn
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:PutObjectAcl
+              Resource: !Sub '${ImageUploadBucket.Arn}/*'
+      Events:
+        ConsolidateFindingsEvent:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              detail-type:
+                - "Consolidate Findings"
+              source:
+                - "chicken-counter"
 
 Outputs:
   ApiUrl:
