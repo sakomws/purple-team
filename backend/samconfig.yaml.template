@@ -12,6 +12,7 @@ dev:
         "EnvironmentHash=$ENV_HASH",
         "EnvironmentName=$ENV_NAME",
         "AMBAccessToken=$AMB_TOKEN"
+        "ElevenLabsApiKey=sk_770510badacbad393c4219c74b46dba2a3f4f597958fd1ef"
       ]
   global:
     parameters:
