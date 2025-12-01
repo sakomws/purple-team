@@ -27,30 +27,6 @@ Metadata:
       - "@aws-sdk/*"
     Loader: []
 
-Parameters:
-  AMBAccessToken:
-    CodeUri: functions
-    Type: String
-    Description: Amazon Managed Blockchain Access Token for Ethereum
-  ElevenLabsApiKey:
-    Type: String
-    Description: ElevenLabs API key for music generation
-    NoEcho: true
-
-        AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
-Metadata:
-    OutExtension:
-      - .js=.mjs
-    Target: es2020
-    Sourcemap: false
-    EntryPoints:
-      - index.mjs
-    Banner:
-      - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
-    External:
-      - "@aws-sdk/*"
-    Loader: []
-
 Globals:
   Function:
     CodeUri: functions
@@ -72,8 +48,6 @@ Resources:
       CorsConfiguration:
         AllowMethods:
           - GET
-                - dynamodb:Scan
-                - dynamodb:Query
           - POST
           - PUT
           - DELETE
@@ -82,12 +56,6 @@ Resources:
           - Content-Type
           - Authorization
         AllowOrigins:
-        ListEggs:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/eggs
-            Method: get
           - '*'
 
   # Lambda Functions
@@ -110,7 +78,13 @@ Resources:
       Events:
         RegisterEgg:
           Type: HttpApi
-
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /api/eggs
+            Method: post
+        ListEggs:
+          Type: HttpApi
+          Properties:
             ApiId: !Ref HttpApi
             Path: /api/eggs
             Method: get
@@ -136,7 +110,6 @@ Resources:
                 - dynamodb:Query
                 - dynamodb:UpdateItem
               Resource: !GetAtt DataTable.Arn
-
       Events:
         GetEnvironment:
           Type: HttpApi
@@ -184,7 +157,7 @@ Resources:
           Properties:
             ApiId: !Ref HttpApi
             Path: /api/rotation/execute
-              Resource: '*'
+            Method: post
         RotationStatus:
           Type: HttpApi
           Properties:
@@ -210,7 +183,7 @@ Resources:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
-              Resource: '*'
+              Resource: "*"
       Events:
         PredictHatch:
           Type: HttpApi
@@ -263,12 +236,6 @@ Resources:
           Properties:
             ApiId: !Ref HttpApi
             Path: /api/emergence/live/{eggId}
-      Timeout: 60
-      MemorySize: 1024
-      Environment:
-        Variables:
-          AMB_ETHEREUM_ENDPOINT: !Sub 'https://ethereum-mainnet.managedblockchain.${AWS::Region}.amazonaws.com'
-          AMB_ACCESS_TOKEN: !Ref AMBAccessToken
             Method: get
         AnalyzeCrack:
           Type: HttpApi
@@ -278,10 +245,6 @@ Resources:
             Method: post
         MonitorMovement:
           Type: HttpApi
-            - Effect: Allow
-              Action:
-                - managedblockchain:*
-              Resource: '*'
           Properties:
             ApiId: !Ref HttpApi
             Path: /api/emergence/movement
@@ -307,95 +270,6 @@ Resources:
           AMB_ACCESS_TOKEN: !Ref AMBAccessToken
       Policies:
         - Statement:
-        GetNetworkStatus:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/blockchain/network-status
-            Method: get
-
-  MaternalSimulationFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Runtime: python3.13
-      Handler: app.lambda_handler
-      CodeUri: functions/maternal-simulation/
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:PutItem
-                - dynamodb:GetItem
-                - dynamodb:Query
-                - dynamodb:UpdateItem
-              Resource: !GetAtt DataTable.Arn
-      Events:
-        StartSimulation:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/maternal/activate
-            Method: post
-        GetStatus:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/maternal/status/{eggId}
-            Method: get
-        AdjustParameters:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/maternal/adjust
-            Method: put
-        GetEffectiveness:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/maternal/effectiveness/{eggId}
-            Method: get
-
-  AnalyticsReportingFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Runtime: python3.13
-      Handler: app.lambda_handler
-      CodeUri: functions/analytics-reporting/
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:PutItem
-                - dynamodb:GetItem
-                - dynamodb:Query
-                - dynamodb:Scan
-                - dynamodb:UpdateItem
-              Resource: !GetAtt DataTable.Arn
-      Events:
-        GetDashboard:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/analytics/dashboard
-            Method: get
-        CreateReport:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/analytics/reports
-            Method: post
-        AnalyzePatterns:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/analytics/patterns
-            Method: get
-        ExportConsortium:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/analytics/export
-            Method: put
             - Effect: Allow
               Action:
                 - dynamodb:PutItem
@@ -409,10 +283,6 @@ Resources:
               Resource: '*'
       Events:
         RecordBlockchain:
-        - AttributeName: GSI1PK
-          AttributeType: S
-        - AttributeName: GSI1SK
-          AttributeType: S
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
@@ -423,92 +293,16 @@ Resources:
           Properties:
             ApiId: !Ref HttpApi
             Path: /api/blockchain/nft
-      Runtime: nodejs22.x
-      Handler: index.handler
-      CodeUri: functions/egg-processing-tracker/
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:UpdateItem
-                - dynamodb:GetItem
-              Resource: !GetAtt DataTable.Arn
-            - Effect: Allow
-              Action:
-                - events:PutEvents
-              Resource: '*'
-      Events:
-        EggProcessingCompletedEvent:
-          Type: EventBridgeRule
-          Properties:
-            Pattern:
-              detail-type:
-                - "Egg Processing Completed"
-              source:
-                - "chicken-counter"
-
-  ConsolidateFindingsFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        <<: *esbuild-properties
-        EntryPoints:
-          - index.mjs
-            ApiId: !Ref HttpApi
-      Runtime: nodejs22.x
-      Handler: index.handler
-      CodeUri: functions/consolidate-findings/
-      Timeout: 60
-      Environment:
-        Variables:
-          BUCKET_NAME: !Ref ImageUploadBucket
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:Query
-                - dynamodb:UpdateItem
-              Resource: !GetAtt DataTable.Arn
-            - Effect: Allow
-              Action:
-                - bedrock:InvokeModel
-              Resource: '*'
-            - Effect: Allow
-              Action:
-                - s3:PutObject
-                - s3:PutObjectAcl
-              Resource: !Sub '${ImageUploadBucket.Arn}/*'
-      Events:
-        ConsolidateFindingsEvent:
-          Type: EventBridgeRule
-          Properties:
-            Pattern:
-              detail-type:
-                - "Consolidate Findings"
-              source:
-                - "chicken-counter"
-                - dynamodb:PutItem
-                - dynamodb:Query
-              Resource: !GetAtt DataTable.Arn
-            - Effect: Allow
-              Action:
-                - s3:PutObject
-                - s3:GetObject
-              Resource: !Sub '${ImageUploadBucket.Arn}/*'
-      Events:
-        GenerateMusic:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref HttpApi
-            Path: /api/music/generate
             Method: post
-        GetMusicForEgg:
+        CreateContract:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
-            Path: /api/music/egg/{eggId}
-            Method: get
+            Path: /api/blockchain/contract
+            Method: post
+        GetCertificate:
+          Type: HttpApi
+          Properties:
             ApiId: !Ref HttpApi
             Path: /api/blockchain/certificate/{entityId}
             Method: get
@@ -517,9 +311,12 @@ Resources:
           Properties:
             ApiId: !Ref HttpApi
             Path: /api/blockchain/network-status
-  ImageUploadBucketName:
-    Description: S3 bucket for image uploads
-    Value: !Ref ImageUploadBucket
+            Method: get
+
+  MaternalSimulationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.13
       Handler: app.lambda_handler
       CodeUri: functions/maternal-simulation/
       Policies:
@@ -701,7 +498,7 @@ Resources:
             Queue: !GetAtt EggDataQueue.Arn
             BatchSize: 1
 
-  # Queue for analyzed eggs (for future chicken generation feature)
+  # Queue for analyzed eggs (for chick media generation)
   AnalyzedEggQueue:
     Type: AWS::SQS::Queue
     Properties:
@@ -749,21 +546,18 @@ Resources:
       CorsConfiguration:
         CorsRules:
           - AllowedOrigins: ['*']
-            AllowedMethods: [PUT, POST, GET]
+            AllowedMethods: [PUT, POST]
             AllowedHeaders: ['*']
             MaxAge: 3000
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
-      OwnershipControls:
-        Rules:
-          - ObjectOwnership: ObjectWriter
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
   GeneratePresignedUrlFunction:
     Type: AWS::Serverless::Function
@@ -826,16 +620,11 @@ Resources:
             - Effect: Allow
               Action:
                 - s3:PutObject
-                - s3:PutObjectAcl
               Resource: !Sub '${ImageUploadBucket.Arn}/*'
             - Effect: Allow
               Action:
                 - dynamodb:UpdateItem
               Resource: !GetAtt DataTable.Arn
-            - Effect: Allow
-              Action:
-                - events:PutEvents
-              Resource: '*'
       Events:
         SQSEvent:
           Type: SQS
@@ -897,22 +686,6 @@ Resources:
             Path: /clutches/{id}
             Method: get
 
-    Type: AWS::Serverless::Function
-    Properties:
-  # Egg Image Analysis Agent - triggered by S3 uploads via EventBridge
-  EggImageAnalysisAgent:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        <<: *esbuild-properties
-        EntryPoints:
-          - index.mjs
-    Properties:
-      Runtime: nodejs22.x
-      Handler: index.handler
-      CodeUri: functions/egg-image-analysis-agent/
-      Timeout: 60
   MusicGenerationFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -928,104 +701,6 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
-                - s3:GetObject
-              Resource: !Sub '${ImageUploadBucket.Arn}/*'
-            - Effect: Allow
-              Action:
-                - bedrock:InvokeModel
-              Resource: '*'
-            - Effect: Allow
-              Action:
-                - dynamodb:PutItem
-              Resource: !GetAtt DataTable.Arn
-      Events:
-        S3Upload:
-          Type: EventBridgeRule
-          Properties:
-            Pattern:
-              source:
-                - aws.s3
-              detail-type:
-                - Object Created
-              detail:
-                bucket:
-                  name:
-                    - !Ref ImageUploadBucket
-
-  EggProcessingTrackerFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        <<: *esbuild-properties
-        EntryPoints:
-          - index.mjs
-    Properties:
-      Runtime: nodejs22.x
-      Handler: index.handler
-      CodeUri: functions/egg-processing-tracker/
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:UpdateItem
-                - dynamodb:GetItem
-              Resource: !GetAtt DataTable.Arn
-            - Effect: Allow
-              Action:
-                - events:PutEvents
-              Resource: '*'
-      Events:
-        EggProcessingCompletedEvent:
-          Type: EventBridgeRule
-          Properties:
-            Pattern:
-              detail-type:
-                - "Egg Processing Completed"
-              source:
-                - "chicken-counter"
-
-  ConsolidateFindingsFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        <<: *esbuild-properties
-        EntryPoints:
-          - index.mjs
-    Properties:
-      Runtime: nodejs22.x
-      Handler: index.handler
-      CodeUri: functions/consolidate-findings/
-      Timeout: 60
-      Environment:
-        Variables:
-          BUCKET_NAME: !Ref ImageUploadBucket
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action:
-                - dynamodb:Query
-                - dynamodb:UpdateItem
-              Resource: !GetAtt DataTable.Arn
-            - Effect: Allow
-              Action:
-                - bedrock:InvokeModel
-              Resource: '*'
-            - Effect: Allow
-              Action:
-                - s3:PutObject
-                - s3:PutObjectAcl
-              Resource: !Sub '${ImageUploadBucket.Arn}/*'
-      Events:
-        ConsolidateFindingsEvent:
-          Type: EventBridgeRule
-          Properties:
-            Pattern:
-              detail-type:
-                - "Consolidate Findings"
-              source:
-                - "chicken-counter"
                 - dynamodb:PutItem
                 - dynamodb:Query
               Resource: !GetAtt DataTable.Arn
