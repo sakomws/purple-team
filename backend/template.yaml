@@ -695,14 +695,35 @@ Resources:
             Path: /clutches/{id}
             Method: get
 
+<<<<<<< HEAD
+  MusicGenerationFunction:
+=======
+<<<<<<< HEAD
+  # Egg Image Analysis Agent - triggered by S3 uploads via EventBridge
+  EggImageAnalysisAgent:
+>>>>>>> 3392aa2 (update)
+    Type: AWS::Serverless::Function
+    Properties:
+<<<<<<< HEAD
+=======
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: functions/egg-image-analysis-agent/
+      Timeout: 60
+=======
   MusicGenerationFunction:
     Type: AWS::Serverless::Function
     Properties:
+>>>>>>> 3392aa2 (update)
       Runtime: python3.13
       Handler: app.lambda_handler
       CodeUri: functions/music-generation/
       Timeout: 120
       MemorySize: 1024
+<<<<<<< HEAD
+=======
+>>>>>>> 7b91a55 (music)
+>>>>>>> 3392aa2 (update)
       Environment:
         Variables:
           BUCKET_NAME: !Ref ImageUploadBucket
@@ -710,6 +731,7 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
+<<<<<<< HEAD
                 - s3:GetObject
               Resource: !Sub '${ImageUploadBucket.Arn}/*'
             - Effect: Allow
@@ -808,6 +830,28 @@ Resources:
                 - "Consolidate Findings"
               source:
                 - "chicken-counter"
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource: !GetAtt DataTable.Arn
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+              Resource: !Sub '${ImageUploadBucket.Arn}/*'
+      Events:
+        GenerateMusic:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /api/music/generate
+            Method: post
+        GetMusicForEgg:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /api/music/egg/{eggId}
+            Method: get
+>>>>>>> 7b91a55 (music)
 
 Outputs:
   ApiUrl:
