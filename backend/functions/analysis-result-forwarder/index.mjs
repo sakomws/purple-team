@@ -10,14 +10,16 @@ export const handler = async (event) => {
       const newImage = record.dynamodb.NewImage;
       const item = unmarshall(newImage);
 
-      // Only forward if hatchLikelihood exists (analysis complete)
-      if (item.hatchLikelihood !== undefined) {
+      // Only forward if hatchLikelihood exists AND chickImageUrl doesn't exist yet
+      if (item.hatchLikelihood !== undefined && !item.chickImageUrl) {
         await sqs.send(new SendMessageCommand({
           QueueUrl: QUEUE_URL,
           MessageBody: JSON.stringify(item)
         }));
 
         console.log('Forwarded analyzed egg to queue:', item.sk, 'Hatch likelihood:', item.hatchLikelihood);
+      } else if (item.chickImageUrl) {
+        console.log('Skipping - already has chickImageUrl:', item.sk);
       }
     }
   }

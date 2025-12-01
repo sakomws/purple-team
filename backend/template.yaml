@@ -532,7 +532,7 @@ Resources:
             BatchSize: 1
             FilterCriteria:
               Filters:
-                - Pattern: '{"eventName": ["MODIFY"], "dynamodb": {"NewImage": {"sk": {"S": [{"prefix": "EGG#"}]}, "hatchLikelihood": {"N": [{"exists": true}]}}}}'
+                - Pattern: '{"eventName": ["MODIFY"], "dynamodb": {"NewImage": {"sk": {"S": [{"prefix": "EGG#"}]}, "hatchLikelihood": {"N": [{"exists": true}]}, "chickImageUrl": [{"exists": false}]}, "OldImage": {"hatchLikelihood": [{"exists": false}]}}}'
 
   ImageUploadBucket:
     Type: AWS::S3::Bucket
@@ -589,6 +589,44 @@ Resources:
             ApiId: !Ref HttpApi
             Path: /upload/presigned-url
             Method: post
+
+  ChickImageGenerator:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        <<: *esbuild-properties
+        EntryPoints:
+          - index.mjs
+    Properties:
+      Runtime: nodejs22.x
+      Handler: index.handler
+      CodeUri: functions/chick-image-generator/
+      Timeout: 60
+      MemorySize: 1024
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref ImageUploadBucket
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource: !Sub '${ImageUploadBucket.Arn}/*'
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt DataTable.Arn
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt AnalyzedEggQueue.Arn
+            BatchSize: 1
 
   ListClutchesFunction:
     Type: AWS::Serverless::Function
